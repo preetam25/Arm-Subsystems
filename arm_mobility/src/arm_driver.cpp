@@ -8,7 +8,7 @@ void armCallback(const std_msgs::Float64MultiArray::ConstPtr& msg) {
 	std::vector<double> inp = msg -> data;
 	float basemotor = inp[2];
 	float shoulderactuator = inp[3];
-	float elbowmotor = inp[4];
+	float elbowactuator = inp[4];
 	float pitchmotor = inp[5];
 	float rollmotor = inp[6];
 	float grippermotor = inp[7]; 
@@ -17,7 +17,7 @@ void armCallback(const std_msgs::Float64MultiArray::ConstPtr& msg) {
 	
 	out[0] = basemotor;
 	out[1] = shoulderactuator;
-	out[2] = elbowmotor;
+	out[2] = elbowactuator;
 	out[3] = pitchmotor;
 	out[4] = rollmotor;
 	out[5] = grippermotor;
