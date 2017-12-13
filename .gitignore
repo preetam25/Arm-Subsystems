@@ -1,7 +1,7 @@
-.m~
-.pyc
-.ipynb_checkpoints
-.wav
+*.m~
+*.pyc
+*.ipynb_checkpoints
+*.wav
 *.aux
 *.lof
 *.log

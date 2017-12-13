@@ -30,19 +30,19 @@ VelPin1 = 18
 VelPin2 = 12
 
 
-class Drive:
+class Arm:
     """docstring for ."""
-    def __init__(self, motor_no):
+    def __init__(self):
 
-        self.ShoulderPin=VelPin1
+    self.ShoulderPin=VelPin1
 	GPIO.setup(self.ShoulderPin,GPIO.OUT)
 	self.ElbowPin=VelPin2
-        GPIO.setup(self.ElbowPin,GPIO.OUT)
-        self.rover_velocity1 = 0
+    GPIO.setup(self.ElbowPin,GPIO.OUT)
+    self.rover_velocity1 = 0
 	self.rover_velocity2 = 0
-        self.Velocity1=GPIO.PWM(self.ShoulderPin,255)
+    self.Velocity1=GPIO.PWM(self.ShoulderPin,255)
 	self.Velocity2=GPIO.PWM(self.ElbowPin,255)
-        self.Velocity1.start(0)
+    self.Velocity1.start(0)
 	self.Velocity2.start(0)
 
 

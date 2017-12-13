@@ -130,7 +130,7 @@ include_directories(
 ## Declare a C++ executable
 include_directories(include ${catkin_INCLUDE_DIRS})
 
-add_executable(mobility_driver src/mobility_driver.cpp)
+add_executable(mobility_driver src/arm_driver.cpp)
 
 
 ## Add cmake target dependencies of the executable

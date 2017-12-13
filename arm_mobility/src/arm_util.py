@@ -5,8 +5,8 @@ import scipy.linalg as la
 import math
 
 def get_curr_pt(phi,theta):
-    L1=1
-    L2=0.64
+    L1=55
+    L2=35
     theta_r=(np.pi/180)*theta
     phi_r=(np.pi/180)*phi
     elb_pt_x=L1*np.cos(phi_r)
@@ -17,21 +17,21 @@ def get_curr_pt(phi,theta):
 
 
 def get_elb_pt(phi_r,theta_r):
-    L1=1
-    L2=0.64
+    L1=55
+    L2=35
     elb_pt_x=L1*np.cos(phi_r)
     elb_pt_y=L1*np.sin(phi_r)
     elb_pt=np.array([elb_pt_x,elb_pt_y])
     return elb_pt
 
 def get_actuator_lengths(curr_theta,curr_phi):
-    L1=1
-    Lac1=30/55
-    Lac2=6/55
-    ac2_of1=30/55
-    ac2_of2=6/55
-    ac2_of3=4/55
-    L2=0.64
+    L1=55
+    Lac1=30
+    Lac2=6
+    ac2_of1=30
+    ac2_of2=6
+    ac2_of3=4
+    L2=35
     # Convert to radians
     curr_theta_r=(np.pi/180)*curr_theta
     curr_phi_r=(np.pi/180)*curr_phi
@@ -46,8 +46,8 @@ def get_actuator_lengths(curr_theta,curr_phi):
     curr_ac1_pt_y=Lac1*np.sin(curr_phi_r)
     
     # Get actuator endpoint1
-    orig_ac1_pt_x=-5/55
-    orig_ac1_pt_y=5/55
+    orig_ac1_pt_x=-5
+    orig_ac1_pt_y=5
     
     #-----------------------------------------------------------------------------------
     # Hence, Length of actuator 1 will be the distance between orig and curr ac1 pts
@@ -88,7 +88,7 @@ def get_actuator_lengths(curr_theta,curr_phi):
     #print("Length of Actuator 2 is:" + str(ac2_state*55))
     #-----------------------------------------------------------------------------------
     
-    return ((ac1_state*55),(ac2_state*55))
+    return ((ac1_state),(ac2_state))
     #plt.plot([prev_target_pt_x,curr_target_pt_x],[prev_target_pt_y,curr_target_pt_y])
 
 def L_to_Angle(ac1_L,ac2_L):
@@ -133,8 +133,8 @@ def L_to_Angle(ac1_L,ac2_L):
 
 
 def get_target_angles(theta,phi,dx,dy):
-    L1=1
-    L2=0.64    
+    L1=55
+    L2=35    
     theta_0=theta*np.pi/180
     phi_0=phi*np.pi/180
     curr_vec=np.zeros(2)
@@ -159,7 +159,8 @@ def get_target_angles(theta,phi,dx,dy):
         
     else:
         print("Circles do not intersect")
-
+        return (-1,-1)
+        
     elb_pt=get_elb_pt(phi_0,theta_0)
     dist_1=la.norm(elb_pt-pt1)
     dist_2=la.norm(elb_pt-pt2)
@@ -174,12 +175,39 @@ def get_target_angles(theta,phi,dx,dy):
     fin_vec[1]=np.arctan(diff[1]/diff[0])
     return (fin_vec[1]*180/np.pi,fin_vec[0]*180/np.pi)
 
+def get_act_lengths(pot1,pot2):
+    Pot1_Max=1729
+    Pot1_Min=140
+    Pot2_Max=1717
+    Pot2_Min=73  
+    L1=((pot1-Pot1_Min)/(Pot1_Max-Pot1_Min))*10+25
+    L2=((pot2-Pot2_Min)/(Pot2_Max-Pot2_Min))*10+25
+    return (L1,L2)
+
 '''
-Example Usage
+(Shoulder)Pot1_Max:1729
+(Shoulder)Pot1_Min:140 
+(Elbow)Pot2_Max:1717
+(Elbow)Pot2_Min:73  
+
+Testing Code
 #Get Angles from pot measurement
 (estimated_theta,estimated_phi)=L_to_Angle(29,27)
+print((estimated_theta,estimated_phi))
 #Get Target Theta and Phi
-(target_theta,target_phi)=get_target_angles(estimated_theta,estimated_phi,0.1,0.1)
+(target_theta,target_phi)=get_target_angles(estimated_theta,estimated_phi,11,0)
+print((target_theta,target_phi))
 #Get the Final Actuator lengths to be set
 print (get_actuator_lengths(target_theta,target_phi))
+'''
+'''
+Example Usage
+#Get Lenghts from pot measurement: Write a function
+get_act_lengths(pot1,pot2)
+# Get theta, phi from actuator lenghts
+(estimated_theta,estimated_phi)=L_to_Angle(act1,act2)
+#Get Target Theta and Phi
+(target_theta,target_phi)=get_target_angles(estimated_theta,estimated_phi,dx,dy)
+#Get the Final Actuator lengths to be set
+get_actuator_lengths(target_theta,target_phi)
 '''
