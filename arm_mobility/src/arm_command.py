@@ -78,7 +78,7 @@ class SteerClaw:
             target_state=curr_state
         else:
             (target_L1,target_L2)=get_actuator_lengths(target_theta,target_phi)
-            if(target_L1<25 or target_L2<0):
+            if(target_L1<25 or target_L2<25):
                 print("Not Reachable")
                 target_state=curr_state
             else:
