@@ -107,8 +107,8 @@ class SteerClaw:
 def steer_callback(inp):
     actuator_lock = inp.data[0]  
     elbowmotor_lock = inp.data[1]    
-    roboclaw1.deltax=actuator_lock
-    roboclaw1.deltay=elbowmotor_lock
+    roboclaw1.deltax=0.5*actuator_lock
+    roboclaw1.deltay=1.2*elbowmotor_lock
 
 
 if __name__ == "__main__":
