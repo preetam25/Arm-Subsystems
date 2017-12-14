@@ -42,6 +42,8 @@ class SteerClaw:
         self.claw.ResetEncoders()
         self.targetRpm1=0
         self.targetRpm2=0
+        self.deltax=0
+        self.deltay=0
         self.sample_time = sample_time
         self.last_time = 0.00
         self.last_error1 = 0.00
@@ -60,8 +62,25 @@ class SteerClaw:
         curr_val = self.claw.ReadCurrents()
         pub1.publish(claw_name+"| Curr1 Val :" +str(curr_val[1]) + "| Curr2 Val :" +str(curr_val[2]))
 
-    def update_rpm_1(self):
-        velM1=roboclaw1.targetRpm1
+    def update_rpm(self):
+        pot_val1=self.claw.ReadEncM1()[1]
+        pot_val2=self.claw.ReadEncM2()[1]
+        dt=0.0001
+        #Get Lengths from pot values
+        (estimated_L1,estimated_L2)=get_act_lengths(pot_val1,pot_val2)
+        curr_state=np.array([estimated_L1,estimated_L2])
+        #Get Angles from pot measurement
+        (estimated_theta,estimated_phi)=L_to_Angle(estimated_L1,estimated_L2)
+        (target_theta,target_phi)=get_target_angles(estimated_theta,estimated_phi,self.deltax,self.deltay)
+        if(target_theta==-1):
+            print("Not Reachable")
+            target_state=curr_state
+        else:
+            (target_L1,target_L2)=get_actuator_lengths(target_theta,target_phi)
+            target_state=np.array([target_L1,target_L2])
+        deriv=(target_state-curr_state)/dt
+
+        velM1=deriv[0]
         if velM1>10:
             self.claw.ForwardM1(min(255, velM1))
         elif velM1<-10:
@@ -69,9 +88,7 @@ class SteerClaw:
         else:
             self.claw.ForwardM1(0)
 
-
-    def update_rpm_2(self):
-        velM2=roboclaw1.targetRpm2
+        velM2=deriv[1]
         if velM2>10:
             self.claw.ForwardM2(min(255, velM2))
         elif velM2<-10:
@@ -81,70 +98,9 @@ class SteerClaw:
 
 def steer_callback(inp):
     actuator_lock = inp.data[0]  
-    elbowmotor_lock = inp.data[1]
-    #pot_val1=roboclaw1.claw.ReadEncM1()[1]
-    #pot_val2=roboclaw1.claw.ReadEncM2()[1]
-    #delta=1
-    #dt=0.0001
-    ##Get Lengths from pot values
-    #(estimated_L1,estimated_L2)=get_act_lengths(pot_val1,pot_val2)
-    #curr_state=np.array([estimated_L1,estimated_L2])
-    ##Get Angles from pot measurement
-    #(estimated_theta,estimated_phi)=L_to_Angle(estimated_L1,estimated_L2)
-#
-    ##print(estimated_theta,estimated_phi)
-    #if actuator_lock == 1:
-    #    print("actuator_lock is: "+str(actuator_lock))
-    #    (target_theta,target_phi)=get_target_angles(estimated_theta,estimated_phi,delta,0)
-    #    if(target_theta==-1):
-    #        print("Not Reachable")
-    #        target_state=curr_state
-    #    else:
-    #        (target_L1,target_L2)=get_actuator_lengths(target_theta,target_phi)
-    #        target_state=np.array([target_L1,target_L2])
-    #
-    #elif actuator_lock == -1:
-    #    print("actuator_lock is: "+str(actuator_lock))
-    #    (target_theta,target_phi)=get_target_angles(estimated_theta,estimated_phi,-delta,0)
-    #    if(target_theta==-1):
-    #        print("Not Reachable")
-    #        target_state=curr_state
-    #    else:
-    #        (target_L1,target_L2)=get_actuator_lengths(target_theta,target_phi)
-    #        target_state=np.array([target_L1,target_L2])
-    #    
-    #else: 
-    #    if(elbowmotor_lock==0):
-    #        target_state=curr_state
-#
-    #
-    #if elbowmotor_lock == 1:
-    #    print("elbow_lock is: "+str(elbowmotor_lock))
-    #    (target_theta,target_phi)=get_target_angles(estimated_theta,estimated_phi,0,delta)
-    #    if(target_theta==-1):
-    #        print("Not Reachable")
-    #        target_state=curr_state
-    #    else:
-    #        (target_L1,target_L2)=get_actuator_lengths(target_theta,target_phi)
-    #        target_state=np.array([target_L1,target_L2])
-#
-    #elif elbowmotor_lock == -1:
-    #    print("elbow_lock is: "+str(elbowmotor_lock))
-    #    (target_theta,target_phi)=get_target_angles(estimated_theta,estimated_phi,0,-delta)
-    #    if(target_theta==-1):
-    #        print("Not Reachable")
-    #        target_state=curr_state
-    #    else:
-    #        (target_L1,target_L2)=get_actuator_lengths(target_theta,target_phi)
-    #        target_state=np.array([target_L1,target_L2])
-    #
-    #else:
-    #    if(actuator_lock==0):
-    #        target_state=curr_state
-    #
-    #deriv=(target_state-curr_state)/dt
-    roboclaw1.targetRpm1=int(230*actuator_lock)
-    roboclaw1.targetRpm2=int(230*elbowmotor_lock)
+    elbowmotor_lock = inp.data[1]    
+    roboclaw1.deltax=10*actuator_lock
+    roboclaw1.deltay=10*elbowmotor_lock
 
 
 if __name__ == "__main__":
@@ -172,8 +128,7 @@ if __name__ == "__main__":
     roboclaw1.claw.ForwardM2(0)
 
     while not rospy.is_shutdown():
-        roboclaw1.update_rpm_1()
-        roboclaw1.update_rpm_2()
+        roboclaw1.update_rpm()
         roboclaw1.pub_pot(pub,"roboclaw1")
         roboclaw1.pub_curr(pub,"roboclaw1")
 
