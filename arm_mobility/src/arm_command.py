@@ -65,12 +65,13 @@ class SteerClaw:
     def update_rpm(self):
         pot_val1=self.claw.ReadEncM1()[1]
         pot_val2=self.claw.ReadEncM2()[1]
-        dt=0.0001
+        dt=0.001
         #Get Lengths from pot values
         (estimated_L1,estimated_L2)=get_act_lengths(pot_val1,pot_val2)
         curr_state=np.array([estimated_L1,estimated_L2])
         #Get Angles from pot measurement
         (estimated_theta,estimated_phi)=L_to_Angle(estimated_L1,estimated_L2)
+        print("Current State: | " +str(estimated_theta)+" | "+str(estimated_phi))
         (target_theta,target_phi)=get_target_angles(estimated_theta,estimated_phi,self.deltax,self.deltay)
         if(target_theta==-1):
             print("Not Reachable")
@@ -82,6 +83,7 @@ class SteerClaw:
                 target_state=curr_state
             else:
                 target_state=np.array([target_L1,target_L2])
+        print("Net Displacement required "+str((target_state-curr_state)/2.54))
         deriv=(target_state-curr_state)/dt
 
         velM1=int(deriv[0])
