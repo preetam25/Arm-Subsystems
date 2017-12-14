@@ -77,10 +77,15 @@ class SteerClaw:
             target_state=curr_state
         else:
             (target_L1,target_L2)=get_actuator_lengths(target_theta,target_phi)
-            target_state=np.array([target_L1,target_L2])
+            if(target_L1<25 or target_L2<0):
+                print("Not Reachable")
+                target_state=curr_state
+            else:
+                target_state=np.array([target_L1,target_L2])
         deriv=(target_state-curr_state)/dt
 
-        velM1=deriv[0]
+        velM1=int(deriv[0])
+        #velM1=int(230*self.deltax)
         if velM1>10:
             self.claw.ForwardM1(min(255, velM1))
         elif velM1<-10:
@@ -88,7 +93,8 @@ class SteerClaw:
         else:
             self.claw.ForwardM1(0)
 
-        velM2=deriv[1]
+        #velM2=int(230*self.deltay)
+        velM2=int(deriv[1])
         if velM2>10:
             self.claw.ForwardM2(min(255, velM2))
         elif velM2<-10:
@@ -99,8 +105,8 @@ class SteerClaw:
 def steer_callback(inp):
     actuator_lock = inp.data[0]  
     elbowmotor_lock = inp.data[1]    
-    roboclaw1.deltax=10*actuator_lock
-    roboclaw1.deltay=10*elbowmotor_lock
+    roboclaw1.deltax=actuator_lock
+    roboclaw1.deltay=elbowmotor_lock
 
 
 if __name__ == "__main__":
