@@ -16,6 +16,8 @@ ShoulderHigh = 17
 ShoulderLow = 27
 ElbowHigh = 6
 ElbowLow = 5
+BRHigh = 16
+BRLow = 26
 
 GPIO.setup(ShoulderHigh,GPIO.OUT)
 GPIO.setup(ShoulderLow,GPIO.OUT)
@@ -28,8 +30,8 @@ GPIO.setup(ElbowLow,GPIO.OUT)
 
 VelPin1 = 18
 VelPin2 = 12
-
-
+VelPin3 = 13
+ 
 class Arm:
     """docstring for ."""
     def __init__(self):
@@ -38,13 +40,17 @@ class Arm:
 	GPIO.setup(self.ShoulderPin,GPIO.OUT)
 	self.ElbowPin=VelPin2
     GPIO.setup(self.ElbowPin,GPIO.OUT)
+    self.BRPin=VelPin3
+    GPIO.setup(self.BRPin,GPIO.OUT)   
     self.rover_velocity1 = 0
 	self.rover_velocity2 = 0
+    self.rover_velocity3 = 0
     self.Velocity1=GPIO.PWM(self.ShoulderPin,255)
 	self.Velocity2=GPIO.PWM(self.ElbowPin,255)
+    self.Velocity3=GPIO.PWM(self.ElbowPin,255)
     self.Velocity1.start(0)
 	self.Velocity2.start(0)
-
+    self.Velocity3.start(0)
 
     def shoulder_update(self):
         if self.rover_velocity1 < -10:
@@ -96,4 +102,30 @@ class Arm:
         GPIO.output(ElbowHigh,GPIO.LOW)
         GPIO.output(ElbowLow,GPIO.LOW)
         self.Velocity2.ChangeDutyCycle(0)
+        #time.sleep(0.02)
+
+    def BR_update(self):
+        if self.rover_velocity3< -10:
+            self.BR_forward()
+        elif self.rover_velocity3 > 10:
+            self.BR_backward()
+        else:
+            self.BR_stopped()
+
+    def BR_forward(self):
+        GPIO.output(BRHigh,GPIO.HIGH)
+        GPIO.output(BRLow,GPIO.LOW)
+        self.Velocity3.ChangeDutyCycle(abs(self.rover_velocity3))
+        #time.sleep(0.02)
+
+    def BR_backward(self):
+        GPIO.output(BRHigh,GPIO.LOW)
+        GPIO.output(BRLow,GPIO.HIGH)
+        self.Velocity3.ChangeDutyCycle(abs(self.rover_velocity3))
+        #time.sleep(0.02)
+
+    def BR_stopped(self):
+        GPIO.output(BRHigh,GPIO.LOW)
+        GPIO.output(BRLow,GPIO.LOW)
+        self.Velocity3.ChangeDutyCycle(0)
         #time.sleep(0.02)

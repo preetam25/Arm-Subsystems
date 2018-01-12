@@ -13,9 +13,9 @@ from multiprocessing import Process
 Actuators = Arm()
 
 def arm_ol_callback(inp):
-    Actuators.arm_speed1 = inp.data[0]*100;
-    Actuators.arm_speed2 = inp.data[1]*100;
-
+    Actuators.rover_velocity1 = inp.data[0]*100;
+    Actuators.rover_velocity2 = inp.data[1]*100;
+    Actuators.rover_velocity3 = inp.data[2]*100;
 
 if __name__ == "__main__":
     rospy.init_node("Arm_node")
@@ -25,5 +25,6 @@ if __name__ == "__main__":
     while not rospy.is_shutdown():
         Actuators.shoulder_update()
         Actuators.elbow_update()
+        Actuators.BR_update()
 
     GPIO.cleanup()
