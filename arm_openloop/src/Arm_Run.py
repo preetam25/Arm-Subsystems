@@ -20,7 +20,7 @@ def arm_ol_callback(inp):
 if __name__ == "__main__":
     rospy.init_node("Arm_node")
     rospy.loginfo("Starting Arm Open Loop Node")
-    rospy.Subscriber("/rover/arm_directives", Float64MultiArray, drive_callback)
+    rospy.Subscriber("/rover/arm_directives", Float64MultiArray, arm_ol_callback)
 
     while not rospy.is_shutdown():
         Actuators.shoulder_update()

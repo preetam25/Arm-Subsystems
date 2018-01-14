@@ -130,7 +130,7 @@ include_directories(
 ## Declare a C++ executable
 include_directories(include ${catkin_INCLUDE_DIRS})
 
-add_executable(mobility_driver src/arm_driver.cpp)
+add_executable(arm_driver src/arm_driver.cpp)
 
 
 ## Add cmake target dependencies of the executable
@@ -138,7 +138,7 @@ add_executable(mobility_driver src/arm_driver.cpp)
 # add_dependencies(arm_openloop_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(mobility_driver
+target_link_libraries(arm_driver
   ${catkin_LIBRARIES}
 )
 

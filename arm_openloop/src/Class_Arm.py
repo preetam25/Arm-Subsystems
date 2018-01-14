@@ -23,6 +23,8 @@ GPIO.setup(ShoulderHigh,GPIO.OUT)
 GPIO.setup(ShoulderLow,GPIO.OUT)
 GPIO.setup(ElbowHigh,GPIO.OUT)
 GPIO.setup(ElbowLow,GPIO.OUT)
+GPIO.setup(BRHigh,GPIO.OUT)
+GPIO.setup(BRLow,GPIO.OUT)
 
 
 
@@ -36,21 +38,21 @@ class Arm:
     """docstring for ."""
     def __init__(self):
 
-    self.ShoulderPin=VelPin1
-	GPIO.setup(self.ShoulderPin,GPIO.OUT)
-	self.ElbowPin=VelPin2
-    GPIO.setup(self.ElbowPin,GPIO.OUT)
-    self.BRPin=VelPin3
-    GPIO.setup(self.BRPin,GPIO.OUT)   
-    self.rover_velocity1 = 0
-	self.rover_velocity2 = 0
-    self.rover_velocity3 = 0
-    self.Velocity1=GPIO.PWM(self.ShoulderPin,255)
-	self.Velocity2=GPIO.PWM(self.ElbowPin,255)
-    self.Velocity3=GPIO.PWM(self.ElbowPin,255)
-    self.Velocity1.start(0)
-	self.Velocity2.start(0)
-    self.Velocity3.start(0)
+        self.ShoulderPin=VelPin1
+        GPIO.setup(self.ShoulderPin,GPIO.OUT)
+        self.ElbowPin=VelPin2
+        GPIO.setup(self.ElbowPin,GPIO.OUT)
+        self.BRPin=VelPin3
+        GPIO.setup(self.BRPin,GPIO.OUT)   
+        self.rover_velocity1 = 0
+        self.rover_velocity2 = 0
+        self.rover_velocity3 = 0
+        self.Velocity1=GPIO.PWM(self.ShoulderPin,255)
+        self.Velocity2=GPIO.PWM(self.ElbowPin,255)
+        self.Velocity3=GPIO.PWM(self.ElbowPin,255)
+        self.Velocity1.start(0)
+        self.Velocity2.start(0)
+        self.Velocity3.start(0)
 
     def shoulder_update(self):
         if self.rover_velocity1 < -10:

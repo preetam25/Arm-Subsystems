@@ -8,11 +8,14 @@ void armCallback(const std_msgs::Float64MultiArray::ConstPtr& msg) {
 	std::vector<double> inp = msg -> data;
 	float Actuator1 = inp[3];
 	float Actuator2 = inp[4];
+	float Actuator3 = inp[5];
+
 	//float angSpeed = inp[1]; 
 
-	std::vector<double> out(2, 0);
+	std::vector<double> out(3, 0);
 	out[0] = Actuator1;
 	out[1] = Actuator2;
+	out[2] = Actuator3;
 
 	std_msgs::Float64MultiArray outMsg;
 	outMsg.data = out;
@@ -22,7 +25,7 @@ void armCallback(const std_msgs::Float64MultiArray::ConstPtr& msg) {
 
 int main(int argc, char** argv) {
 
-	ros::init(argc, argv, "mobility_driver");
+	ros::init(argc, argv, "arm_driver");
 	ros::NodeHandle _nh;
 	arm_ol_pub = _nh.advertise<std_msgs::Float64MultiArray>("/rover/arm_directives", 100);
 	ros::Subscriber arm_ol_sub = _nh.subscribe("/rover/control_directives", 100, armCallback);
