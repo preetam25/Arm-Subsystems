@@ -154,7 +154,6 @@ class SteerClaw:
             self.lockEnc1Val=self.claw.ReadEncM1()[1]
 
         velM2=int(230*self.BR_update)
-        print(velM2)
         if velM2>10:
             self.claw.ForwardM2(min(255, velM2))
         elif velM2<-10:
@@ -191,7 +190,7 @@ if __name__ == "__main__":
 
     for i in range(20):
         try:
-            roboclaw1 = SteerClaw(0x81, "/dev/ttyACM1", 9600, "BaseClaw")
+            roboclaw1 = SteerClaw(0x81, "/dev/actuatorClaw", 9600, "BaseClaw")
             roboclaw1.setActuatorConstants()
         except SerialException:
             rospy.logwarn("Could not connect to Arm RoboClaw1, retrying...")
@@ -201,7 +200,7 @@ if __name__ == "__main__":
     
     for i in range(20):
         try:
-            roboclaw2 = SteerClaw(0x80, "/dev/ttyACM0", 9600, "WristClaw")
+            roboclaw2 = SteerClaw(0x80, "/dev/wristClaw", 9600, "WristClaw")
             roboclaw2.setPIDconstants(0.1,0.01,10)
         except SerialException:
             rospy.logwarn("Could not connect to Arm RoboClaw2, retrying...")
