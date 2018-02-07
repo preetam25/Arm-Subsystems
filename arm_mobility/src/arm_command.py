@@ -55,14 +55,18 @@ class SteerClaw:
         self.deltax=0
         self.deltay=0
 
-    def pub_pot(self, pub, claw_name):
+    def pub_pot(self, pub):
         pot_val1 = self.claw.ReadEncM1()[1]
         pot_val2 = self.claw.ReadEncM2()[1]
-        pub.publish(claw_name+"| Pot1 Val :" +str(pot_val1) + "| Pot2 Val :" +str(pot_val2))
+        pub.publish("Actuator Pot1 Val :" +str(pot_val1) + "| Pot2 Val :" +str(pot_val2))
 
-    def pub_curr(self,pub,claw_name):
+    def pub_enc(self, pub):
+        enc_val = self.claw.ReadEncM1()[1]
+        pub.publish("Encoder Val :" +str(enc_val))
+
+    def pub_curr(self,pub):
         curr_val = self.claw.ReadCurrents()
-        pub1.publish(claw_name+"| Curr1 Val :" +str(curr_val[1]) + "| Curr2 Val :" +str(curr_val[2]))
+        pub1.publish("Actuator Curr1 Val :" +str(curr_val[1]) + "| Curr2 Val :" +str(curr_val[2]))
 
     def update_rpm(self):
 
@@ -88,9 +92,9 @@ class SteerClaw:
         self.kp=Kp
         self.ki=Ki
         self.kd=Kd
-        self.mode="roll"
+        self.mode="lock"
         self.RPM_update=0
-        self.clmotor_speed=10
+        self.clmotor_speed=40
         self.last_error1 = 0.00
         self.enc1Pos=0.00
         self.last_error1 = 0.00
@@ -152,6 +156,7 @@ class SteerClaw:
             else:
                 self.claw.ForwardM1(0)
             self.lockEnc1Val=self.claw.ReadEncM1()[1]
+            print("Locking to position:",str(self.lockEnc1Val))
 
         velM2=int(230*self.BR_update)
         if velM2>10:
@@ -168,8 +173,10 @@ def arm_callback(inp):
     roboclaw1.deltay=inp.data[1]
     roboclaw1.deltax=inp.data[2]
     if(inp.data[3]==0):
+        print("Lock Mode")
         roboclaw2.mode="lock"
     else:
+        print("Entering Roll")
         roboclaw2.mode="roll"
         if(inp.data[3]==1):
             roboclaw2.RPM_update=roboclaw2.clmotor_speed
@@ -184,6 +191,8 @@ if __name__ == "__main__":
     rospy.loginfo("Starting Arm Close loop node")
     pub = rospy.Publisher('Pot_Val', String, queue_size=10)
     pub1 = rospy.Publisher('Curr_Val', String, queue_size=10)
+    pub2 = rospy.Publisher('Enc_Val', String, queue_size=10)
+    
     rospy.Subscriber("/rover/arm_directives", Float64MultiArray, arm_callback)
     r_time = rospy.Rate(1)
 
@@ -201,7 +210,7 @@ if __name__ == "__main__":
     for i in range(20):
         try:
             roboclaw2 = SteerClaw(0x80, "/dev/wristClaw", 9600, "WristClaw")
-            roboclaw2.setPIDconstants(0.1,0.01,10)
+            roboclaw2.setPIDconstants(0.01,0.01,10)
         except SerialException:
             rospy.logwarn("Could not connect to Arm RoboClaw2, retrying...")
             r_time.sleep()
@@ -217,8 +226,9 @@ if __name__ == "__main__":
 
     while not rospy.is_shutdown():
         roboclaw1.update_rpm()
-        roboclaw1.pub_pot(pub,"ActuatorClaw")
+        roboclaw1.pub_pot(pub)
         roboclaw2.update_pid()
+        roboclaw2.pub_enc(pub2)
         r_time.sleep()
 
     roboclaw1.claw.ForwardM1(0)
