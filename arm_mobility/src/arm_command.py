@@ -8,7 +8,7 @@ import rospy
 import tf
 from geometry_msgs.msg import Quaternion, Twist
 from nav_msgs.msg import Odometry
-from std_msgs.msg import Float64MultiArray,Float32MultiArray,String
+from std_msgs.msg import Float64MultiArray,Float32MultiArray,String, Float64
 import time
 import numpy as np
 import thread
@@ -18,69 +18,60 @@ import sys
 
 #-----------------------------------------------------------------
 #SIGINT handler
-def sigint_handler(signal, frame):
+def sigint_handler_arm(signal, frame):
+    if(enable_actuatorclaw):
+        actuatorClaw.claw.ForwardM1(0)
+        actuatorClaw.claw.ForwardM2(0)
+    if(enable_wristclaw):
+        wristClaw.claw.ForwardM1(0)
+        wristClaw.claw.ForwardM2(0)
+    if(enable_gripperclaw):
+        gripperClaw.claw.ForwardM1(0)
+        gripperClaw.claw.ForwardM2(0)
     sys.exit(0)
 
-class SteerClaw:
+class ArmClaw:
 
-    def __init__(self, address, dev_name, baud_rate, name, sample_time=0.1, last_time=0.00, current_time=0.00):
-        self.ERRORS = {0x0000: (diagnostic_msgs.msg.DiagnosticStatus.OK, "Normal"),
-        0x0001: (diagnostic_msgs.msg.DiagnosticStatus.WARN, "M1 over current"),
-        0x0002: (diagnostic_msgs.msg.DiagnosticStatus.WARN, "M2 over current"),
-        0x0004: (diagnostic_msgs.msg.DiagnosticStatus.ERROR, "Emergency Stop"),
-        0x0008: (diagnostic_msgs.msg.DiagnosticStatus.ERROR, "Temperature1"),
-        0x0010: (diagnostic_msgs.msg.DiagnosticStatus.ERROR, "Temperature2"),
-        0x0020: (diagnostic_msgs.msg.DiagnosticStatus.ERROR, "Main batt voltage high"),
-        0x0040: (diagnostic_msgs.msg.DiagnosticStatus.ERROR, "Logic batt voltage high"),
-        0x0080: (diagnostic_msgs.msg.DiagnosticStatus.ERROR, "Logic batt voltage low"),
-        0x0100: (diagnostic_msgs.msg.DiagnosticStatus.WARN, "M1 driver fault"),
-        0x0200: (diagnostic_msgs.msg.DiagnosticStatus.WARN, "M2 driver fault"),
-        0x0400: (diagnostic_msgs.msg.DiagnosticStatus.WARN, "Main batt voltage high"),
-        0x0800: (diagnostic_msgs.msg.DiagnosticStatus.WARN, "Main batt voltage low"),
-        0x1000: (diagnostic_msgs.msg.DiagnosticStatus.WARN, "Temperature1"),
-        0x2000: (diagnostic_msgs.msg.DiagnosticStatus.WARN, "Temperature2"),
-        0x4000: (diagnostic_msgs.msg.DiagnosticStatus.OK, "M1 home"),
-        0x8000: (diagnostic_msgs.msg.DiagnosticStatus.OK, "M2 home")}
-
+    def __init__(self, address, dev_name, baud_rate, reset_encoders=False):
         self.claw = RoboClaw(address, dev_name, baud_rate)
-        self.name = name
-        self.claw.ResetEncoders()
-        self.sample_time = sample_time
-        self.last_time = 0.00
-        self.current_time=0.00
+        if(reset_encoders):
+            self.claw.ResetEncoders()
         
     def setActuatorConstants(self):
-        self.targetRpm1=0
-        self.targetRpm2=0
-        self.deltax=0
-        self.deltay=0
+        #When these variables are set to +/- 1 M1, M2 move fwd bkwd
+        self.actuatorclawM1=0
+        self.actuatorclawM2=0
+
+    def setGripperConstants(self):
+        #When grip roll is set to 1, we get ACW rotn o/w CW. Fing_close=1 means fingers will be closed
+    	self.grip_roll=0
+    	self.fing_close=0
 
     def pub_pot(self, pub):
+        #Read absolute encoder values and publish
         pot_val1 = self.claw.ReadEncM1()[1]
         pot_val2 = self.claw.ReadEncM2()[1]
-        pub.publish("Actuator Pot1 Val :" +str(pot_val1) + "| Pot2 Val :" +str(pot_val2))
+        pot_val=Float64MultiArray(data=[pot_val1,pot_val2])
+        pub.publish(pot_val)
 
     def pub_enc(self, pub):
-        enc_val = self.claw.ReadEncM1()[1]
-        pub.publish("Encoder Val :" +str(enc_val))
+        #Read quadrature encoder values
+        enc_val = self.claw.ReadEncM2()[1]
+        pub.publish(enc_val)
 
-    def pub_curr(self,pub):
-        curr_val = self.claw.ReadCurrents()
-        pub1.publish("Actuator Curr1 Val :" +str(curr_val[1]) + "| Curr2 Val :" +str(curr_val[2]))
-
-    def update_rpm(self):
-
-        #velM1=int(deriv[0])
-        velM1=int(230*self.deltax)
-        if velM1>10:
+    # Update Actuator motions
+    def update_actuators(self):
+        #Make actuatorclawM1 move
+        velM1=int(230*self.actuatorclawM1)
+        if velM1>0:
             self.claw.ForwardM1(min(255, velM1))
-        elif velM1<-10:
+        elif velM1<0:
             self.claw.BackwardM1(min(255, -velM1))
         else:
             self.claw.ForwardM1(0)
 
-        #velM2=int(deriv[1])
-        velM2=int(230*self.deltay)
+        #Make acctuatorclawM2 move
+        velM2=int(230*self.actuatorclawM2)
         if velM2>10:
             self.claw.ForwardM2(min(255, velM2))
         elif velM2<-10:
@@ -88,10 +79,30 @@ class SteerClaw:
         else:
             self.claw.ForwardM2(0)
 
-    def setPIDconstants(self,Kp,Ki,Kd):
+    def update_gripper(self):
+        # Close/Open the fingers
+        velM1=int(230*self.fing_close)
+        if velM1>10:
+            self.claw.ForwardM1(min(255, velM1))
+        elif velM1<-10:
+            self.claw.BackwardM1(min(255, -velM1))
+        else:
+            self.claw.ForwardM1(0)
+        
+        #Make the gripper roll
+        velM2=int(230*self.grip_roll)
+        if velM2>10:
+            self.claw.ForwardM2(min(255, velM2))
+        elif velM2<-10:
+            self.claw.BackwardM2(min(255, -velM2))
+        else:
+            self.claw.ForwardM2(0)
+'''
+    def setPIDconstants(self,Kp,Ki,Kd,Kdd):
         self.kp=Kp
         self.ki=Ki
         self.kd=Kd
+        self.kdd=Kdd
         self.mode="lock"
         self.RPM_update=0
         self.clmotor_speed=40
@@ -101,8 +112,8 @@ class SteerClaw:
         self.PTerm1=0.00
         self.ITerm1=0.00
         self.DTerm1=0.00
-        self.diff_ITerm1=0.00
-        self.last_Ierr1=0.00
+        self.DDTerm1=0.00
+        self.prev_Dterm=0.00
         self.delta_error1=0.00
         self.diff1=0.00
         self.enc1Pos=0.00
@@ -118,120 +129,163 @@ class SteerClaw:
         #----------------------------------------------------
         #Roboclaw1
         if ((delta_time >= self.sample_time) and (self.mode=="lock")):
-            self.enc1Pos = self.claw.ReadEncM1()[1]
+            self.enc1Pos = self.claw.ReadEncM2()[1]
             self.diff1 = self.lockEnc1Val - self.enc1Pos  #Error in 1
             
             self.delta_error1 = self.diff1 - self.last_error1
             self.PTerm1 = self.diff1 #Pterm
             self.ITerm1+=self.diff1*delta_time
             
-            if(self.last_Ierr1!=0):
-                self.diff_ITerm1=self.ITerm1-self.last_Ierr1
-            
             if (self.ITerm1 < -self.int_windout1):
                 self.ITerm1 = -self.int_windout1
             elif (self.ITerm1 > self.int_windout1):
                 self.ITerm1 = self.int_windout1
+
             self.DTerm1 = self.delta_error1 / delta_time
+            self.DDTerm1=(self.DTerm1-self.prev_Dterm)/delta_time
             # Remember last time and last error for next calculation
             self.last_error1 = self.diff1
             self.last_Ierr1=self.ITerm1
+            self.prev_Dterm=self.DTerm1
 
-            #velM1 = int((self.kp*self.PTerm1) + (self.ki * self.ITerm1) + (self.kd * self.DTerm1))
+            #velM1 = int((self.kp*self.PTerm1) + (self.ki * self.ITerm1) + (self.kd * self.DTerm1)+(self.kdd*self.DDTerm1))
             velM1=0
             if self.enc1Pos < (self.lockEnc1Val - self.deadzone1):
-                self.claw.BackwardM1(min(255, velM1))
+                self.claw.BackwardM2(min(255, velM1))
             elif self.enc1Pos > (self.lockEnc1Val + self.deadzone1):
-                self.claw.ForwardM1(min(255, -velM1))
+                self.claw.ForwardM2(min(255, -velM1))
             else:
-                self.claw.ForwardM1(0)
+                self.claw.ForwardM2(0)
 
         if(self.mode=="roll"):
-            #velM1=self.RPM_update
-            velM1=0
+            velM1=self.RPM_update
+            #velM1=0
             if velM1>0:
-                self.claw.ForwardM1(min(255, velM1))
+                self.claw.ForwardM2(min(255, velM1))
             elif velM1<0:
-                self.claw.BackwardM1(min(255, -velM1))
+                self.claw.BackwardM2(min(255, -velM1))
             else:
-                self.claw.ForwardM1(0)
-            self.lockEnc1Val=self.claw.ReadEncM1()[1]
+                self.claw.ForwardM2(0)
+            self.lockEnc1Val=self.claw.ReadEncM2()[1]
             print("Locking to position:",str(self.lockEnc1Val))
 
         velM2=int(230*self.BR_update)
         if velM2>10:
-            self.claw.ForwardM2(min(255, velM2))
+            self.claw.ForwardM1(min(255, velM2))
         elif velM2<-10:
-            self.claw.BackwardM2(min(255, -velM2))
+            self.claw.BackwardM1(min(255, -velM2))
         else:
-            self.claw.ForwardM2(0)
+            self.claw.ForwardM1(0)
+'''
 
 
-
-def arm_callback(inp):    
-    roboclaw2.BR_update=inp.data[0]
-    roboclaw1.deltay=inp.data[1]
-    roboclaw1.deltax=inp.data[2]
-    if(inp.data[3]==0):
-        print("Lock Mode")
-        roboclaw2.mode="lock"
-    else:
-        print("Entering Roll")
-        roboclaw2.mode="roll"
-        if(inp.data[3]==1):
-            roboclaw2.RPM_update=roboclaw2.clmotor_speed
+def arm_callback(inp):
+    if(enable_actuatorclaw):
+        actuatorClaw.actuatorclawM1=inp.data[1]
+        actuatorClaw.actuatorclawM2=inp.data[2]
+    if(enable_wristclaw):
+        wristClaw.BR_update=-inp.data[0]
+        if(inp.data[3]==0):
+            wristClaw.mode="lock"
         else:
-            roboclaw2.RPM_update=-roboclaw2.clmotor_speed   
+            print("Entering Roll Mode")
+            wristClaw.mode="roll"
+            if(inp.data[3]==1):
+                wristClaw.RPM_update=wristClaw.clmotor_speed
+            else:
+                wristClaw.RPM_update=-wristClaw.clmotor_speed
+    
+    if(enable_gripperclaw):
+        gripperClaw.fing_close=inp.data[4]
+        gripperClaw.grip_roll=inp.data[5]
+    
+    if(inp.data[0]!=0):
+        print("Base Rotn commanded")
+    if(inp.data[1]!=0):
+        print("Shoulder Actuator commanded, M1 commanded")
+    if(inp.data[2]!=0):
+        print("Elbow Actuator commanded, M2 commanded")
+    if(inp.data[4]!=0):
+        print("Gripper Fingers commanded")
+    if(inp.data[5]!=0):
+        print("Gripper Roll commanded")   
 
 
 if __name__ == "__main__":
 
-    signal.signal(signal.SIGINT, sigint_handler)
-    rospy.init_node("roboclaw_node")
-    rospy.loginfo("Starting Arm Close loop node")
-    pub = rospy.Publisher('Pot_Val', String, queue_size=10)
-    pub1 = rospy.Publisher('Curr_Val', String, queue_size=10)
-    pub2 = rospy.Publisher('Enc_Val', String, queue_size=10)
-    
+    signal.signal(signal.SIGINT, sigint_handler_arm)
+    rospy.init_node("Arm Roboclaw_node")
+    rospy.loginfo("Starting Arm Open loop node")
+    pub_pot = rospy.Publisher('Pot_Val', Float64MultiArray, queue_size=10)
+    pub_enc = rospy.Publisher('Enc_Val', Float64, queue_size=10)
     rospy.Subscriber("/rover/arm_directives", Float64MultiArray, arm_callback)
     r_time = rospy.Rate(1)
+    enable_actuatorclaw=True
+    enable_wristclaw=False
+    enable_gripperclaw=False
+    if(enable_actuatorclaw):
+        for i in range(20):
+            try:
+                actuatorClaw = ArmClaw(0x80, "/dev/actuatorClaw", 9600)
+                actuatorClaw.setActuatorConstants()
+            except SerialException:
+                rospy.logwarn("Could not connect to Actuator Claw, retrying...")
+                r_time.sleep()
+        rospy.loginfo("Connected to Actuator Claw")
 
-
-    for i in range(20):
-        try:
-            roboclaw1 = SteerClaw(0x81, "/dev/actuatorClaw", 9600, "BaseClaw")
-            roboclaw1.setActuatorConstants()
-        except SerialException:
-            rospy.logwarn("Could not connect to Arm RoboClaw1, retrying...")
-            r_time.sleep()
-    rospy.loginfo("Connected to Arm RoboClaw1")
-
+    if(enable_wristclaw):
+        for i in range(20):
+            try:
+                wristClaw = ArmClaw(0x81, "/dev/wristClaw", 9600)
+                wristClaw.setPIDconstants(0.03,0.02,30,20)
+            except SerialException:
+                rospy.logwarn("Could not connect to Wrist Claw, retrying...")
+                r_time.sleep()
     
-    for i in range(20):
-        try:
-            roboclaw2 = SteerClaw(0x80, "/dev/wristClaw", 9600, "WristClaw")
-            roboclaw2.setPIDconstants(0.01,0.01,10)
-        except SerialException:
-            rospy.logwarn("Could not connect to Arm RoboClaw2, retrying...")
-            r_time.sleep()
+    	rospy.loginfo("Connected to Wrist Claw")
     
-    rospy.loginfo("Connected to Arm RoboClaw2")
+    if(enable_gripperclaw):
+        for i in range(20):
+            try:
+                gripperClaw = ArmClaw(0x80, "/dev/gripperClaw", 9600)
+                gripperClaw.setGripperConstants()
+
+            except SerialException:
+                rospy.logwarn("Could not connect to Gripper Claw, retrying...")
+                r_time.sleep()
+
+        rospy.loginfo("Connected to Gripper Claw")
 
 
     r_time = rospy.Rate(5)
-    roboclaw1.claw.ForwardM1(0)
-    roboclaw1.claw.ForwardM2(0)
-    roboclaw2.claw.ForwardM1(0)
-    roboclaw2.claw.ForwardM2(0)
+    # Initialize the motors and actuator !!!VVV IMP!!!!
+    if(enable_actuatorclaw):
+        actuatorClaw.claw.ForwardM1(0)
+        actuatorClaw.claw.ForwardM2(0)
+    if(enable_wristclaw):
+        wristClaw.claw.ForwardM1(0)
+        wristClaw.claw.ForwardM2(0)
+    if(enable_gripperclaw):
+        gripperClaw.claw.ForwardM1(0)
+        gripperClaw.claw.ForwardM2(0)
 
-    while not rospy.is_shutdown():
-        roboclaw1.update_rpm()
-        roboclaw1.pub_pot(pub)
-        roboclaw2.update_pid()
-        roboclaw2.pub_enc(pub2)
+    while True:
+        if(enable_actuatorclaw):
+            actuatorClaw.update_actuators()
+            actuatorClaw.pub_pot(pub_pot)
+        if(enable_wristclaw):
+            wristClaw.update_pid()
+            wristClaw.pub_enc(pub_end)
+        if(enable_gripperclaw):
+            gripperClaw.update_gripper()
         r_time.sleep()
 
-    roboclaw1.claw.ForwardM1(0)
-    roboclaw1.claw.ForwardM2(0)
-    roboclaw2.claw.ForwardM1(0)
-    roboclaw2.claw.ForwardM2(0)
+    if(enable_actuatorclaw):
+        actuatorClaw.claw.ForwardM1(0)
+        actuatorClaw.claw.ForwardM2(0)
+    if(enable_wristclaw):
+        wristClaw.claw.ForwardM1(0)
+        wristClaw.claw.ForwardM2(0)
+    if(enable_gripperclaw):
+        gripperClaw.claw.ForwardM1(0)
+        gripperClaw.claw.ForwardM2(0)
