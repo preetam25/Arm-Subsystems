@@ -6,7 +6,7 @@ import diagnostic_updater
 from roboclaw import RoboClaw
 import rospy
 import tf
-from geometry_msgs.msg import Quaternion, Twist
+from geometry_msgs-.msg import Quaternion, Twist
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Float64MultiArray, Float32MultiArray, String, Float64
 import time
@@ -104,12 +104,24 @@ class ArmClaw:
     def update_motor(self):
         
         #Make base motor move
+<<<<<<< HEAD
         if (self.past_val):
             # print("Laser on")
             self.claw.BackwardM1(255)
         else:
             # print("Laser off")
             self.claw.BackwardM1(0) 
+=======
+        velM1=int(230*self.BR_update)
+        if velM1>10:
+            print("Vel M1 commanded")
+            self.claw.ForwardM1(min(255, velM1))
+        elif velM1<-10:
+            print("Vel M1 commanded backward")
+            self.claw.BackwardM1(min(255,-velM1))
+        else:
+            self.claw.ForwardM1(0) 
+>>>>>>> 85d6927b5cd9f687fa65ac1d401f4e954f9ee978
 
         #Make the gripper roll
         velM2=int(230*self.grip_roll)
@@ -134,9 +146,13 @@ def arm_callback(inp):
     
     if(enable_motorclaw):
     	motorclaw.grip_roll=inp.data[5]
+<<<<<<< HEAD
         print(inp.data[0])
         if(inp.data[0]==1):
             motorclaw.past_val= not motorclaw.past_val
+=======
+        motorclaw.BR_update=-inp.data[0]
+>>>>>>> 85d6927b5cd9f687fa65ac1d401f4e954f9ee978
     
     if(inp.data[0]!=0):
         print("Base Rotn commanded")
@@ -150,7 +166,46 @@ def arm_callback(inp):
         print("Finger Actuator commanded, M2 commanded")
     if(inp.data[5]!=0):
         print("Gripper Roll commanded")
+<<<<<<< HEAD
+=======
 
+
+def GUI_callback(inp):
+    print(inp.data)
+    print("Commanded")
+    if(inp.data=="Ac1_Up"):
+        actuator1Claw.actuator1clawM1=1
+    if(inp.data=="Ac1_Down"):
+        actuator1Claw.actuator1clawM1=-1
+    if(inp.data=="Ac2_Up"):
+        actuator1Claw.actuator1clawM2=1
+    if(inp.data=="Ac2_Down"):
+        actuator1Claw.actuator1clawM2=-1
+    if(inp.data=="Ac3_Up"):
+        actuator2Claw.actuator2clawM1=1
+    if(inp.data=="Ac3_Down"):
+        actuator2Claw.actuator2clawM1=-1
+    if(inp.data=="Ac4_Up"):
+        actuator2Claw.actuator2clawM2=1
+    if(inp.data=="Ac4_Down"):
+        actuator2Claw.actuator2clawM2=-1
+    if(inp.data=="Grip_Up"):
+        motorclaw.grip_roll=1
+    if(inp.data=="Grip_Down"):
+        motorclaw.grip_roll=-1
+    if(inp.data=="Stop_All"):
+        actuator1Claw.actuator1clawM1=0
+        actuator1Claw.actuator1clawM2=0
+        actuator2Claw.actuator2clawM1=0
+        actuator2Claw.actuator2clawM2=0
+        motorclaw.grip_roll=0
+        motorclaw.BR_update=0
+
+>>>>>>> 85d6927b5cd9f687fa65ac1d401f4e954f9ee978
+
+# def cont_callback(inp):
+#     actuator1Claw.actuator1clawM1=inp.data[0]
+#     actuator1Claw.actuator1clawM2=inp.data[1]
 
 def GUI_callback(inp):
     print(inp.data)
@@ -193,8 +248,12 @@ if __name__ == "__main__":
     signal.signal(signal.SIGINT, sigint_handler_arm)
     rospy.init_node("Arm Roboclaw_node")
     rospy.loginfo("Starting Arm Open loop node")
+<<<<<<< HEAD
     pub_pot1 = rospy.Publisher('Pot_Val_Claw1', Float64MultiArray, queue_size=10)
     pub_pot2 = rospy.Publisher('Pot_Val_Claw2', Float64MultiArray, queue_size=10)
+=======
+    pub_pot = rospy.Publisher('Pot_Val', Float64MultiArray, queue_size=10)
+>>>>>>> 85d6927b5cd9f687fa65ac1d401f4e954f9ee978
     rospy.Subscriber("/rover/arm_directives", Float64MultiArray, arm_callback)
     rospy.Subscriber("Django_node", String, GUI_callback)
     # joystick=True
@@ -258,10 +317,17 @@ if __name__ == "__main__":
         try:
             if(enable_actuator1claw):
                 actuator1Claw.update_actuator1()
+<<<<<<< HEAD
                 actuator1Claw.pub_pot(pub_pot1)
             if(enable_actuator2claw):
                 actuator2Claw.update_actuator2()
                 actuator2Claw.pub_pot(pub_pot2)
+=======
+                actuator1Claw.pub_pot(pub_pot)
+            if(enable_actuator2claw):
+                actuator2Claw.update_actuator2()
+                actuator2Claw.pub_pot(pub_pot)
+>>>>>>> 85d6927b5cd9f687fa65ac1d401f4e954f9ee978
             if(enable_motorclaw):
                 motorclaw.update_motor()
             r_time.sleep()
