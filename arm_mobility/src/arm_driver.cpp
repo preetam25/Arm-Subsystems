@@ -9,8 +9,8 @@ void driveCallback(const std_msgs::Float64MultiArray::ConstPtr& msg) {
 	float BaseRotn=inp[2];
 	float ShoulderActuator = inp[3];
 	float ElbowActuator = inp[4];
-	float PitchMotor=inp[5];
-	float RollMotor=inp[6];
+	float WristActuator=inp[5];
+	float FingerActuator=inp[6];
 	float GripperMotor=inp[7];
 	//float angSpeed = inp[1]; 
 
@@ -18,8 +18,8 @@ void driveCallback(const std_msgs::Float64MultiArray::ConstPtr& msg) {
 	out[0]=BaseRotn;
 	out[1]=ShoulderActuator;
 	out[2]=ElbowActuator;
-	out[3]=PitchMotor;
-	out[4]=RollMotor;
+	out[3]=WristActuator;
+	out[4]=FingerActuator;
 	out[5]=GripperMotor;
 
 	std_msgs::Float64MultiArray outMsg;
